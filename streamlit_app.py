@@ -2,20 +2,40 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-df = pd.read_csv("state_data.csv")
+# (Optional) cache for faster reloads
+@st.cache_data
+def load_data():
+    return pd.read_csv("state_data.csv")
 
-st.header("US State Demographics")
+df = load_data()
 
-# Let user select which state to graph
-state = st.selectbox("State:", df["State"].unique())
+st.header("Changes in US State Demographics Over Time")
 
-# Create a graph of total population
-df_state = df[df["State"] == state]
-fig = px.line(
-    df_state, x="Year", y="Total Population", title=f"Total Population of {state}"
+# Selections
+state = st.selectbox("Select a state:", df["State"].unique(), key="state")
+demographic = st.selectbox(
+    "Select a demographic:",
+    ["Total Population", "Median Household Income"],
+    key="demographic"
 )
-st.plotly_chart(fig)
 
-# Show the entire dataframe
-st.write("All Data")
-st.dataframe(df)
+# Filter once, reuse
+df_state = df[df["State"] == state]
+
+# ---- Tabs ----
+tab_graphs, tab_table = st.tabs(["Graphs", "Table"])
+
+with tab_graphs:
+    # Single graph determined by both selections
+    fig = px.line(
+        df_state,
+        x="Year",
+        y=demographic,
+        title=f"{demographic} of {state}"
+    )
+    fig.update_yaxes(rangemode="tozero")
+    st.plotly_chart(fig, use_container_width=True)
+
+with tab_table:
+    st.write("All Data")
+    st.dataframe(df, use_container_width=True)
